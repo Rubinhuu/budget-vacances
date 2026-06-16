@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Budget Vacances</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{
+    --cream:#fff7ee; --ink:#5b3a29; --soft:#b08f7a; --soft2:#a8856f;
+    --terra:#e07a3f; --line:#f1e3d6; --card-sh:0 6px 18px rgba(150,90,40,.14);
+  }
+  body{font-family:'Nunito',sans-serif;background:#e9eaee;display:flex;justify-content:center;color:var(--ink);}
+  #app{width:100%;max-width:440px;min-height:100vh;background:var(--cream);position:relative;overflow:hidden;}
+
+  /* ---------- screens ---------- */
+  .screen{display:none;min-height:100vh;padding-bottom:90px;}
+  .screen.active{display:block;}
+
+  /* ---------- HOME ---------- */
+  .home-hd{padding:26px 20px 14px;}
+  .home-hd .head{font-family:'Fraunces',serif;font-size:27px;font-weight:600;}
+  .home-hd .head span{color:var(--terra);}
+  .home-hd .sub{font-size:13px;color:var(--soft2);font-weight:700;margin-top:3px;}
+  .trips{padding:4px 16px 0;}
+  .trip{border-radius:22px;overflow:hidden;margin-bottom:16px;box-shadow:var(--card-sh);cursor:pointer;transition:transform .12s;}
+  .trip:active{transform:scale(.985);}
+  .cover{position:relative;height:138px;background:linear-gradient(135deg,#ffb36b,#ff7e5f);display:flex;align-items:flex-end;}
+  .cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .cover .veil{position:absolute;inset:0;background:linear-gradient(160deg,rgba(224,122,63,.28),rgba(91,58,41,.04) 45%,rgba(35,18,8,.6));}
+  .cover .ct{position:relative;z-index:2;padding:14px;font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.45);}
+  .cover .badge{position:absolute;top:12px;right:12px;z-index:2;background:rgba(255,255,255,.92);border-radius:20px;padding:5px 11px;font-size:11px;font-weight:800;color:var(--ink);}
+  .trip .body{background:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;}
+  .trip .spent{font-size:10.5px;color:var(--soft);font-weight:800;letter-spacing:.05em;}
+  .trip .num{font-size:19px;font-weight:800;}
+  .trip .sub2{font-size:12px;color:var(--soft);font-weight:700;text-align:right;}
+  .empty{padding:60px 30px;text-align:center;color:var(--soft);font-weight:700;}
+
+  /* ---------- DETAIL ---------- */
+  .dcover{position:relative;height:160px;display:flex;flex-direction:column;justify-content:flex-end;}
+  .dcover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .dcover .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(35,18,8,.12),rgba(35,18,8,.62));}
+  .dcover .back{position:absolute;top:14px;left:14px;z-index:3;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink);border:none;cursor:pointer;}
+  .dcover .edit{position:absolute;top:14px;right:14px;z-index:3;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ink);border:none;cursor:pointer;}
+  .dcover .ct{position:relative;z-index:2;padding:16px;}
+  .dcover .ct .t{font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.45);}
+  .dcover .ct .d{font-size:13px;color:#fff;opacity:.95;font-weight:700;}
+  .dbody{padding:16px;}
+
+  .budgwrap{background:#fff;border-radius:18px;padding:16px;box-shadow:var(--card-sh);margin-bottom:16px;}
+  .budgwrap .line{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .budgwrap .big{font-size:22px;font-weight:800;}
+  .budgwrap .of{font-size:13px;color:var(--soft);font-weight:700;}
+  .bar{height:11px;background:var(--line);border-radius:6px;overflow:hidden;}
+  .bar>div{height:100%;border-radius:6px;transition:width .35s ease;}
+  .remain{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+  .remain .rl{font-size:12px;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.04em;}
+  .remain .rv{font-size:17px;font-weight:800;}
+  .split{display:flex;gap:10px;margin-top:13px;}
+  .split .p{flex:1;background:var(--cream);border-radius:12px;padding:9px 11px;}
+  .split .p .l{font-size:10.5px;color:var(--soft);font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
+  .split .p .v{font-size:15px;font-weight:800;margin-top:2px;}
+
+  .chartcard{background:#fff;border-radius:18px;padding:18px;box-shadow:var(--card-sh);margin-bottom:18px;}
+  .chartcard .h{font-family:'Fraunces',serif;font-size:16px;font-weight:700;margin-bottom:14px;}
+  .donutwrap{display:flex;align-items:center;gap:18px;}
+  .donut{width:116px;height:116px;border-radius:50%;flex-shrink:0;position:relative;}
+  .donut::after{content:"";position:absolute;inset:17px;border-radius:50%;background:#fff;}
+  .donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;}
+  .donut .ctr .a{font-family:'Fraunces',serif;font-size:16px;font-weight:700;}
+  .donut .ctr .b{font-size:10px;color:var(--soft);font-weight:700;}
+  .leg{flex:1;}
+  .leg .li{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:9px;}
+  .leg .li:last-child{margin-bottom:0;}
+  .leg .sw{width:11px;height:11px;border-radius:4px;flex-shrink:0;}
+  .leg .pc{margin-left:auto;color:var(--soft2);font-weight:800;}
+  .chart-empty{font-size:13px;color:var(--soft);font-weight:700;text-align:center;padding:8px 0;}
+
+  .seclab{font-family:'Fraunces',serif;font-size:16px;font-weight:700;margin:4px 2px 12px;}
+  .exp{display:flex;align-items:center;gap:12px;background:#fff;border-radius:15px;padding:12px 14px;margin-bottom:10px;box-shadow:0 3px 10px rgba(150,90,40,.07);}
+  .exp .em{font-size:22px;}
+  .exp .info{flex:1;min-width:0;}
+  .exp .t{font-size:14.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .exp .d{font-size:11.5px;color:var(--soft);font-weight:700;margin-top:1px;}
+  .exp .amt{font-size:15px;font-weight:800;text-align:right;white-space:nowrap;}
+
+  /* ---------- FAB ---------- */
+  .fab{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);max-width:440px;width:calc(100% - 40px);z-index:30;}
+  .fab button{width:100%;border:none;border-radius:18px;padding:16px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff9a5b,#ef6d3e);box-shadow:0 10px 26px rgba(224,108,55,.45);cursor:pointer;}
+
+  /* ---------- SHEETS / MODALS ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(40,22,10,.45);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+  .scrim.open{display:flex;}
+  .sheet{width:100%;max-width:440px;background:var(--cream);border-radius:26px 26px 0 0;padding:20px 20px 26px;max-height:92vh;overflow-y:auto;animation:up .25s ease;}
+  @keyframes up{from{transform:translateY(40px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .sheet h2{font-family:'Fraunces',serif;font-size:21px;font-weight:700;margin-bottom:18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:800;color:var(--soft2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+  .field input,.field select{width:100%;border:2px solid var(--line);background:#fff;border-radius:13px;padding:13px 14px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--ink);outline:none;}
+  .field input:focus,.field select:focus{border-color:var(--terra);}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{border:2px solid var(--line);background:#fff;border-radius:13px;padding:9px 12px;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:6px;}
+  .chip.sel{border-color:var(--terra);background:#fff1e6;}
+  .covers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .cov{aspect-ratio:1;border-radius:12px;overflow:hidden;position:relative;cursor:pointer;border:3px solid transparent;}
+  .cov img{width:100%;height:100%;object-fit:cover;}
+  .cov.sel{border-color:var(--terra);}
+  .cov.add{border:2px dashed #d8b793;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#c08a5e;font-weight:800;font-size:11px;text-align:center;gap:2px;}
+  .cov.add .plus{font-size:22px;line-height:1;}
+  .sheet-actions{display:flex;gap:10px;margin-top:8px;}
+  .btn-ghost,.btn-main{flex:1;border:none;border-radius:14px;padding:15px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+  .btn-ghost{background:#efe2d4;color:var(--soft2);}
+  .btn-main{background:linear-gradient(135deg,#ff9a5b,#ef6d3e);color:#fff;}
+  .btn-del{width:100%;border:none;background:transparent;color:#c0392b;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;padding:14px;margin-top:6px;cursor:pointer;}
+  .seg{display:flex;gap:8px;}
+  .seg button{flex:1;border:2px solid var(--line);background:#fff;border-radius:13px;padding:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:var(--ink);cursor:pointer;}
+  .seg button.sel{border-color:var(--terra);background:#fff1e6;}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="home-hd">
+      <div class="head">Tes <span>aventures</span></div>
+      <div class="sub" id="home-sub">—</div>
+    </div>
+    <div class="trips" id="trips"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="screen" id="screen-detail">
+    <div class="dcover" id="d-cover">
+      <button class="back" onclick="goHome()">←</button>
+      <button class="edit" onclick="openTripEdit()">✎</button>
+      <div class="veil"></div>
+      <div class="ct"><div class="t" id="d-name"></div><div class="d" id="d-meta"></div></div>
+    </div>
+    <div class="dbody">
+      <div class="budgwrap">
+        <div class="line"><div class="big" id="d-spent"></div><div class="of" id="d-budget"></div></div>
+        <div class="bar"><div id="d-bar"></div></div>
+        <div class="remain"><div class="rl" id="d-remain-label">Restant</div><div class="rv" id="d-remain"></div></div>
+      </div>
+      <div class="chartcard">
+        <div class="h">Où part l'argent</div>
+        <div id="d-chart"></div>
+      </div>
+      <div class="seclab">Dépenses</div>
+      <div id="d-expenses"></div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <div class="fab" id="fab"><button id="fab-btn"></button></div>
+</div>
+
+<!-- SHEET: nouveau voyage -->
+<div class="scrim" id="sheet-trip">
+  <div class="sheet">
+    <h2 id="trip-sheet-title">Nouveau carnet</h2>
+    <div class="field"><label>Nom du voyage</label><input id="t-name" placeholder="ex. Lisbonne 2026"></div>
+    <div class="row2">
+      <div class="field"><label>Budget</label><input id="t-budget" type="number" inputmode="decimal" placeholder="1200"></div>
+      <div class="field"><label>Devise</label>
+        <select id="t-cur"><option>EUR</option><option>CHF</option><option>USD</option><option>GBP</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Photo de couverture</label><div class="covers" id="t-covers"></div>
+      <input type="file" accept="image/*" id="t-photo-input" style="display:none"></div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" onclick="closeSheet('sheet-trip')">Annuler</button>
+      <button class="btn-main" id="trip-save-btn" onclick="saveTrip()">Créer le carnet</button>
+    </div>
+    <button class="btn-del" id="trip-del-btn" onclick="deleteTrip()" style="display:none">Supprimer ce carnet</button>
+  </div>
+</div>
+
+<!-- SHEET: nouvelle dépense -->
+<div class="scrim" id="sheet-exp">
+  <div class="sheet">
+    <h2>Nouvelle dépense</h2>
+    <div class="field"><label>Quoi ?</label><input id="e-label" placeholder="ex. Hôtel Alfama"></div>
+    <div class="row2">
+      <div class="field"><label>Montant</label><input id="e-amount" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Devise</label><select id="e-cur"></select></div>
+    </div>
+    <div class="field"><label>Catégorie</label><div class="chips" id="e-cats"></div></div>
+    <div class="field"><label>Date</label><input id="e-date" type="date"></div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" onclick="closeSheet('sheet-exp')">Annuler</button>
+      <button class="btn-main" onclick="createExpense()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- DATA ---------------- */
+const CATS = [
+  {key:'logement',   label:'Logement',    em:'🏨', color:'#e8743b'},
+  {key:'transport',  label:'Transport',   em:'✈️', color:'#f2a65a'},
+  {key:'restaurants',label:'Restaurants', em:'🍽️', color:'#7d9d6f'},
+  {key:'activites',  label:'Activités',   em:'🎟️', color:'#c0566b'},
+  {key:'courses',    label:'Courses',     em:'🛒', color:'#b8893f'},
+  {key:'autre',      label:'Autre',       em:'💳', color:'#9c8b7a'},
+];
+const catBy = k => CATS.find(c=>c.key===k) || CATS[5];
+const COVERS = ['lisboa-tram','verbier-snow','toscana-road','santorini-blue','tokyo-night','desert-dunes','paris-river','tropic-beach'];
+const coverUrl = c => (c && (c.startsWith('data:')||c.startsWith('http'))) ? c : `https://picsum.photos/seed/${c}/600/400`;
+const SYM = {EUR:'€',CHF:'CHF',USD:'$',GBP:'£'};
+
+let nidN = 1000;
+function nid(){ return Date.now().toString(36) + (nidN++).toString(36) + Math.random().toString(36).slice(2,5); }
+let state = { trips: [] };
+
+function seed(){
+  state.trips = [
+    { id:nid(), name:'Lisbonne 2026', cur:'EUR', budget:1200, cover:'lisboa-tram', meta:'2 – 6 juin 2026',
+      expenses:[
+        {id:nid(),label:'Vol Genève–Lisbonne',amount:178,cat:'transport',date:'2026-06-02'},
+        {id:nid(),label:'Hôtel Alfama',amount:320,cat:'logement',date:'2026-06-02'},
+        {id:nid(),label:'Time Out Market',amount:64.5,cat:'restaurants',date:'2026-06-03'},
+        {id:nid(),label:'Tram 28',amount:12,cat:'transport',date:'2026-06-03'},
+        {id:nid(),label:'Pastéis de Belém',amount:9.8,cat:'restaurants',date:'2026-06-04'},
+      ]},
+    { id:nid(), name:'Ski Verbier', cur:'CHF', budget:2000, cover:'verbier-snow', meta:'Hiver 2026',
+      expenses:[
+        {id:nid(),label:'Forfait remontées',amount:380,cat:'activites',date:'2026-01-12'},
+        {id:nid(),label:'Chalet 3 nuits',amount:640,cat:'logement',date:'2026-01-12'},
+        {id:nid(),label:'Fondue',amount:96,cat:'restaurants',date:'2026-01-13'},
+      ]},
+    { id:nid(), name:'Road trip Italie', cur:'EUR', budget:800, cover:'toscana-road', meta:'Été 2026',
+      expenses:[
+        {id:nid(),label:'Location voiture',amount:240,cat:'transport',date:'2026-08-01'},
+      ]},
+  ];
+}
+seed();
+
+/* ---------------- HELPERS ---------------- */
+function fmt(n){ return n.toLocaleString('fr-CH',{minimumFractionDigits:0,maximumFractionDigits:2}); }
+function money(n,cur){ return fmt(n)+' '+(SYM[cur]||cur); }
+function spent(t){ return t.expenses.reduce((s,e)=>s+(+e.amount||0),0); }
+function catTotals(t){
+  const m={};
+  t.expenses.forEach(e=>{ m[e.cat]=(m[e.cat]||0)+(+e.amount||0); });
+  return CATS.filter(c=>m[c.key]>0).map(c=>({...c, total:m[c.key]}));
+}
+
+/* ---------------- HOME ---------------- */
+function renderHome(){
+  const wrap = document.getElementById('trips');
+  const n = state.trips.length;
+  const sync = window.CLOUD_ON ? ' · synchronisé ☁' : '';
+  document.getElementById('home-sub').textContent =
+    n ? (n+' carnet'+(n>1?'s':'')+' ouvert'+(n>1?'s':'')+sync) : (window.CLOUD_ON ? 'Connexion…' : '');
+  if(!state.trips.length){ wrap.innerHTML='<div class="empty">Aucun voyage pour l\'instant.<br>Crée ton premier carnet 👇</div>'; return; }
+  wrap.innerHTML = state.trips.map(t=>`
+    <div class="trip" onclick="openTrip('${t.id}')">
+      <div class="cover">
+        <img src="${coverUrl(t.cover)}" onerror="this.style.display='none'">
+        <div class="veil"></div>
+        <div class="badge">${t.cur}</div>
+        <div class="ct">${t.name}</div>
+      </div>
+      <div class="body">
+        <div><div class="spent">DÉPENSÉ</div><div class="num">${money(spent(t),t.cur)}</div></div>
+        <div class="sub2">${t.expenses.length} dépense${t.expenses.length>1?'s':''}<br>budget ${money(t.budget,t.cur)}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------------- DETAIL ---------------- */
+let currentTrip = null;
+function openTrip(id){
+  currentTrip = state.trips.find(t=>t.id===id);
+  renderDetail();
+  show('detail');
+  document.getElementById('app').scrollTop = 0; window.scrollTo(0,0);
+}
+function renderDetail(){
+  const t = currentTrip; if(!t) return;
+  const cov = document.getElementById('d-cover');
+  // refresh cover image
+  cov.querySelectorAll('img').forEach(i=>i.remove());
+  const img = document.createElement('img'); img.src=coverUrl(t.cover);
+  img.onerror=function(){this.style.display='none';}; cov.prepend(img);
+  document.getElementById('d-name').textContent = t.name;
+  document.getElementById('d-meta').textContent = t.meta || '';
+  const sp = spent(t), pct = t.budget>0 ? Math.min(100, sp/t.budget*100) : 0;
+  document.getElementById('d-spent').textContent = money(sp,t.cur)+' dépensés';
+  document.getElementById('d-budget').textContent = 'budget '+money(t.budget,t.cur);
+  const bar = document.getElementById('d-bar');
+  bar.style.width = pct+'%';
+  bar.style.background = sp>t.budget ? 'linear-gradient(90deg,#e0563f,#c0392b)' : 'linear-gradient(90deg,#ff9a5b,#ff7e5f)';
+  const remain = t.budget - sp;
+  const rl = document.getElementById('d-remain-label');
+  const rv = document.getElementById('d-remain');
+  if(remain >= 0){ rl.textContent='Restant'; rv.textContent=money(remain,t.cur); rv.style.color='#3f8f5e'; }
+  else { rl.textContent='Dépassé de'; rv.textContent=money(-remain,t.cur); rv.style.color='#c0392b'; }
+  renderChart(t);
+  renderExpenses(t);
+}
+function renderChart(t){
+  const tot = spent(t);
+  const box = document.getElementById('d-chart');
+  const cats = catTotals(t);
+  if(tot<=0 || !cats.length){ box.innerHTML='<div class="chart-empty">Ajoute une dépense pour voir la répartition.</div>'; return; }
+  let acc=0; const segs=[];
+  cats.forEach(c=>{ const a=acc/tot*100; acc+=c.total; const b=acc/tot*100; segs.push(`${c.color} ${a}% ${b}%`); });
+  box.innerHTML = `
+    <div class="donutwrap">
+      <div class="donut" style="background:conic-gradient(${segs.join(',')});">
+        <div class="ctr"><div class="a">${money(tot,t.cur)}</div><div class="b">total</div></div>
+      </div>
+      <div class="leg">
+        ${cats.map(c=>`<div class="li"><span class="sw" style="background:${c.color}"></span>${c.label}<span class="pc">${money(c.total,t.cur)}</span></div>`).join('')}
+      </div>
+    </div>`;
+}
+function renderExpenses(t){
+  const box = document.getElementById('d-expenses');
+  if(!t.expenses.length){ box.innerHTML='<div class="chart-empty">Aucune dépense encore.</div>'; return; }
+  const fr = d => { try{return new Date(d).toLocaleDateString('fr-CH',{day:'numeric',month:'short'});}catch(e){return d;} };
+  box.innerHTML = t.expenses.slice().reverse().map(e=>{
+    const c = catBy(e.cat);
+    return `<div class="exp">
+      <div class="em">${c.em}</div>
+      <div class="info"><div class="t">${escapeHtml(e.label)}</div><div class="d">${c.label} · ${fr(e.date)}</div></div>
+      <div class="amt">${money(+e.amount,t.cur)}</div>
+    </div>`;
+  }).join('');
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+/* ---------------- NAV ---------------- */
+function show(which){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+which).classList.add('active');
+  const fab = document.getElementById('fab-btn');
+  if(which==='home'){ fab.textContent='＋ Nouveau carnet'; fab.onclick=openTripSheet; }
+  else { fab.textContent='＋ Ajouter une dépense'; fab.onclick=openExpSheet; }
+}
+function goHome(){ renderHome(); show('home'); }
+
+/* ---------------- SHEETS ---------------- */
+function openSheet(id){ document.getElementById(id).classList.add('open'); }
+function closeSheet(id){ document.getElementById(id).classList.remove('open'); }
+
+let selCover = COVERS[0];
+let editingTripId = null;
+function buildCoverPicker(selected){
+  selCover = selected || COVERS[0];
+  const isCustom = selCover && (selCover.startsWith('data:') || selCover.startsWith('http'));
+  const cw = document.getElementById('t-covers');
+  let html = COVERS.map(s=>`<div class="cov${(!isCustom && s===selCover)?' sel':''}" data-cov="${s}"><img src="${coverUrl(s)}" onerror="this.parentNode.style.background='linear-gradient(135deg,#ffb36b,#ff7e5f)'"></div>`).join('');
+  if(isCustom){
+    html += `<div class="cov sel" data-custom="1"><img src="${selCover}"></div>`;
+  } else {
+    html += `<div class="cov add" id="cov-add"><span class="plus">＋</span>Ma photo</div>`;
+  }
+  cw.innerHTML = html;
+  cw.querySelectorAll('.cov[data-cov]').forEach(el=>el.onclick=()=>{ selCover = el.dataset.cov; buildCoverPicker(selCover); });
+  const addBtn = document.getElementById('cov-add');
+  if(addBtn) addBtn.onclick = ()=> document.getElementById('t-photo-input').click();
+  // tapping the custom thumb lets you pick another photo
+  const customThumb = cw.querySelector('.cov[data-custom]');
+  if(customThumb) customThumb.onclick = ()=> document.getElementById('t-photo-input').click();
+}
+document.getElementById('t-photo-input').addEventListener('change', function(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const MAX = 1000;
+      let { width:w, height:h } = img;
+      if(w > h && w > MAX){ h = Math.round(h*MAX/w); w = MAX; }
+      else if(h >= w && h > MAX){ w = Math.round(w*MAX/h); h = MAX; }
+      const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      selCover = cv.toDataURL('image/jpeg', 0.7);   // compressée, légère
+      buildCoverPicker(selCover);
+    };
+    img.onerror = ()=>{ selCover = reader.result; buildCoverPicker(selCover); };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+function openTripSheet(){
+  editingTripId = null;
+  document.getElementById('trip-sheet-title').textContent = 'Nouveau carnet';
+  document.getElementById('trip-save-btn').textContent = 'Créer le carnet';
+  document.getElementById('trip-del-btn').style.display = 'none';
+  document.getElementById('t-name').value='';
+  document.getElementById('t-budget').value='';
+  document.getElementById('t-cur').value='EUR';
+  buildCoverPicker(COVERS[0]);
+  openSheet('sheet-trip');
+}
+function openTripEdit(){
+  if(!currentTrip) return;
+  editingTripId = currentTrip.id;
+  document.getElementById('trip-sheet-title').textContent = 'Modifier le carnet';
+  document.getElementById('trip-save-btn').textContent = 'Enregistrer';
+  document.getElementById('trip-del-btn').style.display = 'block';
+  document.getElementById('t-name').value = currentTrip.name;
+  document.getElementById('t-budget').value = currentTrip.budget;
+  document.getElementById('t-cur').value = currentTrip.cur;
+  buildCoverPicker(currentTrip.cover);
+  openSheet('sheet-trip');
+}
+function saveTrip(){
+  const name = document.getElementById('t-name').value.trim();
+  const budget = parseFloat(document.getElementById('t-budget').value)||0;
+  const cur = document.getElementById('t-cur').value;
+  if(!name){ document.getElementById('t-name').focus(); return; }
+  if(editingTripId){
+    const t = state.trips.find(x=>x.id===editingTripId);
+    t.name=name; t.budget=budget; t.cur=cur; t.cover=selCover;
+    closeSheet('sheet-trip');
+    renderDetail(); renderHome();
+    if(window.CLOUD_ON && window.Cloud) window.Cloud.updateTrip(t.id, {name,budget,cur,cover:selCover});
+  } else {
+    const t = { id:nid(), name, cur, budget, cover:selCover, meta:'', createdAt:Date.now(), expenses:[] };
+    state.trips.unshift(t);
+    closeSheet('sheet-trip');
+    renderHome();
+    openTrip(t.id);
+    if(window.CLOUD_ON && window.Cloud) window.Cloud.createTrip(t);
+  }
+}
+function deleteTrip(){
+  if(!editingTripId) return;
+  if(!confirm('Supprimer ce carnet et toutes ses dépenses ?')) return;
+  const delId = editingTripId;
+  state.trips = state.trips.filter(t=>t.id!==delId);
+  editingTripId = null;
+  closeSheet('sheet-trip');
+  goHome();
+  if(window.CLOUD_ON && window.Cloud) window.Cloud.deleteTrip(delId);
+}
+
+let selCat = 'logement';
+function openExpSheet(){
+  if(!currentTrip) return;
+  document.getElementById('e-label').value='';
+  document.getElementById('e-amount').value='';
+  document.getElementById('e-date').value = new Date().toISOString().slice(0,10);
+  // currency options default to trip currency
+  const curSel = document.getElementById('e-cur');
+  curSel.innerHTML = ['EUR','CHF','USD','GBP'].map(c=>`<option ${c===currentTrip.cur?'selected':''}>${c}</option>`).join('');
+  // category chips
+  selCat='logement';
+  const cc = document.getElementById('e-cats');
+  cc.innerHTML = CATS.map(c=>`<div class="chip${c.key==='logement'?' sel':''}" data-cat="${c.key}">${c.em} ${c.label}</div>`).join('');
+  cc.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{
+    cc.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));
+    el.classList.add('sel'); selCat=el.dataset.cat;
+  });
+  openSheet('sheet-exp');
+}
+function createExpense(){
+  const label = document.getElementById('e-label').value.trim();
+  const amount = parseFloat(document.getElementById('e-amount').value);
+  const date = document.getElementById('e-date').value || new Date().toISOString().slice(0,10);
+  if(!label){ document.getElementById('e-label').focus(); return; }
+  if(!amount || amount<=0){ document.getElementById('e-amount').focus(); return; }
+  currentTrip.expenses.push({ id:nid(), label, amount, cat:selCat, date });
+  closeSheet('sheet-exp');
+  renderDetail();
+  if(window.CLOUD_ON && window.Cloud){
+    const exp = currentTrip.expenses[currentTrip.expenses.length-1];
+    window.Cloud.addExpense(currentTrip.id, exp);
+  }
+}
+
+/* close sheet on scrim tap */
+document.querySelectorAll('.scrim').forEach(s=>s.addEventListener('click',e=>{ if(e.target===s) s.classList.remove('open'); }));
+
+/* ---------------- CLOUD HOOKS (appelés par la couche Firebase) ---------------- */
+window.CLOUD_ON = false;
+window.enterCloudMode = function(){
+  window.CLOUD_ON = true;
+  state.trips = [];          // le cloud devient la source de vérité (on efface les exemples locaux)
+  currentTrip = null;
+  renderHome(); show('home');
+};
+window.applyCloudTrips = function(trips){
+  trips.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  state.trips = trips;
+  if(currentTrip){
+    const t = state.trips.find(x=>x.id===currentTrip.id);
+    if(t){ currentTrip = t; renderDetail(); }
+    else { goHome(); }
+  }
+  renderHome();
+};
+window.cloudError = function(msg){ console.error('Cloud:', msg); };
+
+/* ---------------- INIT ---------------- */
+renderHome();
+show('home');
+</script>
+
+<!-- ============================================================= -->
+<!--  COUCHE STOCKAGE : Firebase / Firestore                       -->
+<!--  Pour activer la synchro, colle ta config Firebase ci-dessous.-->
+<!--  Tant que ce n'est pas fait, l'app tourne en mode démo local. -->
+<!-- ============================================================= -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';
+  import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, arrayUnion }
+    from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js';
+
+  // 👉 1) COLLE ICI ta config Firebase (Console Firebase → Paramètres du projet → tes apps)
+  const firebaseConfig = {
+    apiKey: "AIzaSyCo8Jsw1dlTVI0rtRXudFcz378Wov7VMSE",
+    authDomain: "budget-vacances-f0419.firebaseapp.com",
+    projectId: "budget-vacances-f0419",
+    storageBucket: "budget-vacances-f0419.firebasestorage.app",
+    messagingSenderId: "1037316902509",
+    appId: "1:1037316902509:web:26d46e7fab884b3e6b3964"
+  };
+
+  // 👉 2) Le "salon" partagé : TOI et l'autre personne devez avoir EXACTEMENT le même identifiant ici.
+  const SPACE_ID = "vacances-partage";
+
+  // ---- ne rien toucher en dessous ----
+  function isPlaceholder(c){ return !c || !c.apiKey || c.apiKey.indexOf('COLLE_') === 0; }
+  function clean(o){ const r={}; for(const k in o){ if(o[k]!==undefined) r[k]=o[k]; } return r; }
+
+  if (!isPlaceholder(firebaseConfig)) {
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db  = getFirestore(app);
+      const tripsCol = collection(db, 'spaces', SPACE_ID, 'trips');
+      const tripRef  = id => doc(db, 'spaces', SPACE_ID, 'trips', id);
+
+      window.enterCloudMode();
+
+      onSnapshot(tripsCol, snap => {
+        const trips = [];
+        snap.forEach(d => {
+          const v = d.data();
+          trips.push({
+            id: d.id, name: v.name, cur: v.cur, budget: v.budget,
+            cover: v.cover, meta: v.meta || '', createdAt: v.createdAt || 0,
+            expenses: Array.isArray(v.expenses) ? v.expenses : []
+          });
+        });
+        window.applyCloudTrips(trips);
+      }, err => window.cloudError(err.message));
+
+      window.Cloud = {
+        createTrip: t        => setDoc(tripRef(t.id), clean(t)),
+        updateTrip: (id, f)  => updateDoc(tripRef(id), clean(f)),
+        deleteTrip: id       => deleteDoc(tripRef(id)),
+        addExpense: (id, e)  => updateDoc(tripRef(id), { expenses: arrayUnion(clean(e)) }),
+      };
+    } catch (e) {
+      window.cloudError(e.message);
+    }
+  }
+</script>
+</body>
+</html>
