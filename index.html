@@ -128,10 +128,32 @@
   .seg{display:flex;gap:8px;}
   .seg button{flex:1;border:2px solid var(--line);background:#fff;border-radius:13px;padding:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:var(--ink);cursor:pointer;}
   .seg button.sel{border-color:var(--terra);background:#fff1e6;}
+
+  /* ---------- ÉCRAN DE CODE D'ACCÈS ---------- */
+  .gate{position:fixed;inset:0;z-index:200;background:#fff7ee;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .gate-box{width:100%;max-width:340px;text-align:center;}
+  .gate-logo{width:84px;height:84px;border-radius:22px;margin:0 auto 18px;background:linear-gradient(135deg,#ffb36b,#ef6d3e);display:flex;align-items:center;justify-content:center;font-size:42px;box-shadow:0 10px 26px rgba(224,108,55,.4);}
+  .gate-box h2{font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--ink);}
+  .gate-box p{font-size:14px;color:var(--soft2);font-weight:700;margin:6px 0 20px;}
+  .gate-box input{width:100%;border:2px solid var(--line);background:#fff;border-radius:14px;padding:15px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;text-align:center;color:var(--ink);outline:none;}
+  .gate-box input:focus{border-color:var(--terra);}
+  .gate-err{color:#c0392b;font-size:13px;font-weight:800;min-height:18px;margin:10px 0;}
+  .gate-box button{width:100%;border:none;border-radius:14px;padding:15px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff9a5b,#ef6d3e);cursor:pointer;}
 </style>
 </head>
 <body>
 <div id="app">
+  <!-- ÉCRAN DE CODE D'ACCÈS -->
+  <div class="gate" id="gate" style="display:none">
+    <div class="gate-box">
+      <div class="gate-logo">🌅</div>
+      <h2>Budget Vacances</h2>
+      <p>Entre le code d'accès partagé</p>
+      <input id="gate-code" type="password" inputmode="text" autocomplete="off" placeholder="Code d'accès">
+      <div class="gate-err" id="gate-err"></div>
+      <button id="gate-btn">Entrer</button>
+    </div>
+  </div>
   <!-- HOME -->
   <div class="screen active" id="screen-home">
     <div class="home-hd">
@@ -525,8 +547,8 @@ if ('serviceWorker' in navigator) {
 
 <!-- ============================================================= -->
 <!--  COUCHE STOCKAGE : Firebase / Firestore                       -->
-<!--  Pour activer la synchro, colle ta config Firebase ci-dessous.-->
-<!--  Tant que ce n'est pas fait, l'app tourne en mode démo local. -->
+<!--  Le code d'accès tapé dans l'app détermine l'emplacement      -->
+<!--  des données : sans le bon code, impossible de les trouver.   -->
 <!-- ============================================================= -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';
@@ -535,7 +557,6 @@ if ('serviceWorker' in navigator) {
   import { getAuth, signInAnonymously, onAuthStateChanged }
     from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js';
 
-  // 👉 1) COLLE ICI ta config Firebase (Console Firebase → Paramètres du projet → tes apps)
   const firebaseConfig = {
     apiKey: "AIzaSyCo8Jsw1dlTVI0rtRXudFcz378Wov7VMSE",
     authDomain: "budget-vacances-f0419.firebaseapp.com",
@@ -545,54 +566,77 @@ if ('serviceWorker' in navigator) {
     appId: "1:1037316902509:web:26d46e7fab884b3e6b3964"
   };
 
-  // 👉 2) Le "salon" partagé : TOI et l'autre personne devez avoir EXACTEMENT le même identifiant ici.
-  const SPACE_ID = "vacances-partage";
-
   // ---- ne rien toucher en dessous ----
-  function isPlaceholder(c){ return !c || !c.apiKey || c.apiKey.indexOf('COLLE_') === 0; }
   function clean(o){ const r={}; for(const k in o){ if(o[k]!==undefined) r[k]=o[k]; } return r; }
 
-  if (!isPlaceholder(firebaseConfig)) {
-    try {
-      const app = initializeApp(firebaseConfig);
-      const db  = getFirestore(app);
-      const auth = getAuth(app);
-      const tripsCol = collection(db, 'spaces', SPACE_ID, 'trips');
-      const tripRef  = id => doc(db, 'spaces', SPACE_ID, 'trips', id);
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
 
-      window.enterCloudMode();
-
-      window.Cloud = {
-        createTrip: t        => setDoc(tripRef(t.id), clean(t)),
-        updateTrip: (id, f)  => updateDoc(tripRef(id), clean(f)),
-        deleteTrip: id       => deleteDoc(tripRef(id)),
-        addExpense: (id, e)  => updateDoc(tripRef(id), { expenses: arrayUnion(clean(e)) }),
-      };
-
-      let started = false;
-      function startSync(){
-        if (started) return; started = true;
-        onSnapshot(tripsCol, snap => {
-          const trips = [];
-          snap.forEach(d => {
-            const v = d.data();
-            trips.push({
-              id: d.id, name: v.name, cur: v.cur, budget: v.budget,
-              cover: v.cover, meta: v.meta || '', createdAt: v.createdAt || 0,
-              expenses: Array.isArray(v.expenses) ? v.expenses : []
-            });
-          });
-          window.applyCloudTrips(trips);
-        }, err => window.cloudError(err.message));
-      }
-
-      // on attend d'être connecté (anonyme) avant de lire/écrire
-      onAuthStateChanged(auth, user => { if (user) startSync(); });
-      signInAnonymously(auth).catch(e => window.cloudError('Connexion: ' + e.message));
-    } catch (e) {
-      window.cloudError(e.message);
-    }
+  // le code d'accès -> identifiant d'espace (haché, donc secret et non devinable)
+  async function spaceFromCode(code){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('budget-vacances:' + code));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').slice(0, 40);
   }
+
+  let authReady = false, pendingCode = null, unsub = null;
+
+  // ---- écran de code ----
+  const gate   = document.getElementById('gate');
+  const gErr   = document.getElementById('gate-err');
+  const gInput = document.getElementById('gate-code');
+  function showGate(msg){ gate.style.display = 'flex'; gErr.textContent = msg || ''; setTimeout(() => gInput.focus(), 100); }
+  function hideGate(){ gate.style.display = 'none'; }
+  function getStored(){ try { return localStorage.getItem('bv_code'); } catch(e){ return null; } }
+  function setStored(c){ try { localStorage.setItem('bv_code', c); } catch(e){} }
+
+  async function doConnect(code){
+    let space;
+    try { space = await spaceFromCode(code); }
+    catch(e){ showGate('Erreur navigateur'); return; }
+
+    const tripsCol = collection(db, 'spaces', space, 'trips');
+    const tripRef  = id => doc(db, 'spaces', space, 'trips', id);
+
+    window.Cloud = {
+      createTrip: t       => setDoc(tripRef(t.id), clean(t)),
+      updateTrip: (id, f) => updateDoc(tripRef(id), clean(f)),
+      deleteTrip: id      => deleteDoc(tripRef(id)),
+      addExpense: (id, e) => updateDoc(tripRef(id), { expenses: arrayUnion(clean(e)) }),
+    };
+
+    if (unsub) unsub();
+    let first = true;
+    unsub = onSnapshot(tripsCol, snap => {
+      if (first) { first = false; setStored(code); hideGate(); window.enterCloudMode(); }
+      const trips = [];
+      snap.forEach(d => {
+        const v = d.data();
+        trips.push({
+          id: d.id, name: v.name, cur: v.cur, budget: v.budget,
+          cover: v.cover, meta: v.meta || '', createdAt: v.createdAt || 0,
+          expenses: Array.isArray(v.expenses) ? v.expenses : []
+        });
+      });
+      window.applyCloudTrips(trips);
+    }, err => showGate('Accès refusé — réessaie'));
+  }
+
+  function connect(code){
+    pendingCode = code;
+    if (authReady) doConnect(code); else showGate('Connexion…');
+  }
+
+  document.getElementById('gate-btn').onclick = () => { const v = gInput.value.trim(); if (v) connect(v); };
+  gInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('gate-btn').click(); });
+
+  onAuthStateChanged(auth, user => { if (user) { authReady = true; if (pendingCode) doConnect(pendingCode); } });
+  signInAnonymously(auth).catch(() => showGate('Connexion impossible'));
+
+  // au démarrage : code mémorisé -> connexion directe, sinon on demande
+  const saved = getStored();
+  if (saved) { pendingCode = saved; showGate('Connexion…'); }
+  else { showGate(); }
 </script>
 </body>
 </html>
