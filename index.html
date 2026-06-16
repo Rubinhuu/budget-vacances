@@ -519,6 +519,8 @@ show('home');
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';
   import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, arrayUnion }
     from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js';
+  import { getAuth, signInAnonymously, onAuthStateChanged }
+    from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js';
 
   // 👉 1) COLLE ICI ta config Firebase (Console Firebase → Paramètres du projet → tes apps)
   const firebaseConfig = {
@@ -541,23 +543,11 @@ show('home');
     try {
       const app = initializeApp(firebaseConfig);
       const db  = getFirestore(app);
+      const auth = getAuth(app);
       const tripsCol = collection(db, 'spaces', SPACE_ID, 'trips');
       const tripRef  = id => doc(db, 'spaces', SPACE_ID, 'trips', id);
 
       window.enterCloudMode();
-
-      onSnapshot(tripsCol, snap => {
-        const trips = [];
-        snap.forEach(d => {
-          const v = d.data();
-          trips.push({
-            id: d.id, name: v.name, cur: v.cur, budget: v.budget,
-            cover: v.cover, meta: v.meta || '', createdAt: v.createdAt || 0,
-            expenses: Array.isArray(v.expenses) ? v.expenses : []
-          });
-        });
-        window.applyCloudTrips(trips);
-      }, err => window.cloudError(err.message));
 
       window.Cloud = {
         createTrip: t        => setDoc(tripRef(t.id), clean(t)),
@@ -565,6 +555,27 @@ show('home');
         deleteTrip: id       => deleteDoc(tripRef(id)),
         addExpense: (id, e)  => updateDoc(tripRef(id), { expenses: arrayUnion(clean(e)) }),
       };
+
+      let started = false;
+      function startSync(){
+        if (started) return; started = true;
+        onSnapshot(tripsCol, snap => {
+          const trips = [];
+          snap.forEach(d => {
+            const v = d.data();
+            trips.push({
+              id: d.id, name: v.name, cur: v.cur, budget: v.budget,
+              cover: v.cover, meta: v.meta || '', createdAt: v.createdAt || 0,
+              expenses: Array.isArray(v.expenses) ? v.expenses : []
+            });
+          });
+          window.applyCloudTrips(trips);
+        }, err => window.cloudError(err.message));
+      }
+
+      // on attend d'être connecté (anonyme) avant de lire/écrire
+      onAuthStateChanged(auth, user => { if (user) startSync(); });
+      signInAnonymously(auth).catch(e => window.cloudError('Connexion: ' + e.message));
     } catch (e) {
       window.cloudError(e.message);
     }
