@@ -215,7 +215,7 @@
 <!-- SHEET: nouvelle dépense -->
 <div class="scrim" id="sheet-exp">
   <div class="sheet">
-    <h2>Nouvelle dépense</h2>
+    <h2 id="exp-sheet-title">Nouvelle dépense</h2>
     <div class="field"><label>Quoi ?</label><input id="e-label" placeholder="ex. Hôtel Alfama"></div>
     <div class="row2">
       <div class="field"><label>Montant</label><input id="e-amount" type="number" inputmode="decimal" placeholder="0"></div>
@@ -225,8 +225,9 @@
     <div class="field"><label>Date</label><input id="e-date" type="date"></div>
     <div class="sheet-actions">
       <button class="btn-ghost" onclick="closeSheet('sheet-exp')">Annuler</button>
-      <button class="btn-main" onclick="createExpense()">Ajouter</button>
+      <button class="btn-main" id="exp-save-btn" onclick="saveExpense()">Ajouter</button>
     </div>
+    <button class="btn-del" id="exp-del-btn" onclick="deleteExpense()" style="display:none">Supprimer cette dépense</button>
   </div>
 </div>
 
@@ -360,7 +361,7 @@ function renderExpenses(t){
   const fr = d => { try{return new Date(d).toLocaleDateString('fr-CH',{day:'numeric',month:'short'});}catch(e){return d;} };
   box.innerHTML = t.expenses.slice().reverse().map(e=>{
     const c = catBy(e.cat);
-    return `<div class="exp">
+    return `<div class="exp" onclick="openExpEdit('${e.id}')" style="cursor:pointer">
       <div class="em">${c.em}</div>
       <div class="info"><div class="t">${escapeHtml(e.label)}</div><div class="d">${c.label} · ${fr(e.date)}</div></div>
       <div class="amt">${money(+e.amount,t.cur)}</div>
@@ -480,37 +481,75 @@ function deleteTrip(){
 }
 
 let selCat = 'logement';
-function openExpSheet(){
-  if(!currentTrip) return;
-  document.getElementById('e-label').value='';
-  document.getElementById('e-amount').value='';
-  document.getElementById('e-date').value = new Date().toISOString().slice(0,10);
-  // currency options default to trip currency
+let editingExpId = null;
+
+function buildExpSheet(exp){
   const curSel = document.getElementById('e-cur');
   curSel.innerHTML = ['EUR','CHF','USD','GBP'].map(c=>`<option ${c===currentTrip.cur?'selected':''}>${c}</option>`).join('');
-  // category chips
-  selCat='logement';
+  document.getElementById('e-label').value  = exp ? exp.label  : '';
+  document.getElementById('e-amount').value = exp ? exp.amount : '';
+  document.getElementById('e-date').value   = exp ? exp.date   : new Date().toISOString().slice(0,10);
+  selCat = exp ? exp.cat : 'logement';
   const cc = document.getElementById('e-cats');
-  cc.innerHTML = CATS.map(c=>`<div class="chip${c.key==='logement'?' sel':''}" data-cat="${c.key}">${c.em} ${c.label}</div>`).join('');
+  cc.innerHTML = CATS.map(c=>`<div class="chip${c.key===selCat?' sel':''}" data-cat="${c.key}">${c.em} ${c.label}</div>`).join('');
   cc.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{
     cc.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));
     el.classList.add('sel'); selCat=el.dataset.cat;
   });
+}
+
+function openExpSheet(){
+  if(!currentTrip) return;
+  editingExpId = null;
+  document.getElementById('exp-sheet-title').textContent = 'Nouvelle dépense';
+  document.getElementById('exp-save-btn').textContent = 'Ajouter';
+  document.getElementById('exp-del-btn').style.display = 'none';
+  buildExpSheet(null);
   openSheet('sheet-exp');
 }
-function createExpense(){
+
+function openExpEdit(id){
+  if(!currentTrip) return;
+  const exp = currentTrip.expenses.find(e=>e.id===id);
+  if(!exp) return;
+  editingExpId = id;
+  document.getElementById('exp-sheet-title').textContent = 'Modifier la dépense';
+  document.getElementById('exp-save-btn').textContent = 'Enregistrer';
+  document.getElementById('exp-del-btn').style.display = 'block';
+  buildExpSheet(exp);
+  openSheet('sheet-exp');
+}
+
+function saveExpense(){
   const label = document.getElementById('e-label').value.trim();
   const amount = parseFloat(document.getElementById('e-amount').value);
   const date = document.getElementById('e-date').value || new Date().toISOString().slice(0,10);
   if(!label){ document.getElementById('e-label').focus(); return; }
   if(!amount || amount<=0){ document.getElementById('e-amount').focus(); return; }
-  currentTrip.expenses.push({ id:nid(), label, amount, cat:selCat, date });
+  if(editingExpId){
+    const exp = currentTrip.expenses.find(e=>e.id===editingExpId);
+    if(exp){ exp.label=label; exp.amount=amount; exp.cat=selCat; exp.date=date; }
+    closeSheet('sheet-exp');
+    renderDetail();
+    if(window.CLOUD_ON && window.Cloud && window.Cloud.setExpenses) window.Cloud.setExpenses(currentTrip.id, currentTrip.expenses);
+  } else {
+    const exp = { id:nid(), label, amount, cat:selCat, date };
+    currentTrip.expenses.push(exp);
+    closeSheet('sheet-exp');
+    renderDetail();
+    if(window.CLOUD_ON && window.Cloud) window.Cloud.addExpense(currentTrip.id, exp);
+  }
+}
+
+function deleteExpense(){
+  if(!editingExpId) return;
+  if(!confirm('Supprimer cette dépense ?')) return;
+  const delId = editingExpId;
+  currentTrip.expenses = currentTrip.expenses.filter(e=>e.id!==delId);
+  editingExpId = null;
   closeSheet('sheet-exp');
   renderDetail();
-  if(window.CLOUD_ON && window.Cloud){
-    const exp = currentTrip.expenses[currentTrip.expenses.length-1];
-    window.Cloud.addExpense(currentTrip.id, exp);
-  }
+  if(window.CLOUD_ON && window.Cloud && window.Cloud.setExpenses) window.Cloud.setExpenses(currentTrip.id, currentTrip.expenses);
 }
 
 /* close sheet on scrim tap */
@@ -604,6 +643,7 @@ if ('serviceWorker' in navigator) {
       updateTrip: (id, f) => updateDoc(tripRef(id), clean(f)),
       deleteTrip: id      => deleteDoc(tripRef(id)),
       addExpense: (id, e) => updateDoc(tripRef(id), { expenses: arrayUnion(clean(e)) }),
+      setExpenses: (id, arr) => updateDoc(tripRef(id), { expenses: arr.map(clean) }),
     };
 
     if (unsub) unsub();

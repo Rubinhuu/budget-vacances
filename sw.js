@@ -2,7 +2,7 @@
 // Met en cache l'interface (app shell) pour un démarrage rapide et un usage hors-ligne.
 // Laisse passer Firebase / polices / images externes vers le réseau.
 
-const CACHE = 'budget-vacances-v3';
+const CACHE = 'budget-vacances-v4';
 const ASSETS = [
   './',
   './index.html',
